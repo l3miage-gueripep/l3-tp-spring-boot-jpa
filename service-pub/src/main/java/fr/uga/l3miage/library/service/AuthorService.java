@@ -23,6 +23,8 @@ public interface AuthorService extends BaseService<Author, Long> {
      */
     Collection<Author> searchByName(String name);
 
+    
+
     /**
      * Deletes an author
      *
@@ -31,5 +33,8 @@ public interface AuthorService extends BaseService<Author, Long> {
      * @throws DeleteAuthorException   when an author has books that are co-authored
      */
     void delete(Long id) throws EntityNotFoundException, DeleteAuthorException;
+
+
+
 
 }
