@@ -2,9 +2,12 @@ package fr.uga.l3miage.library.data.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
@@ -12,29 +15,33 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import org.hibernate.annotations.ManyToAny;
+
 @Entity
 @Table(name="BOOK")
 public class Book {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name="book_id")
     private Long id;
 
-    @Column(name="title")
+    @Column(nullable = false)
     private String title;
 
-    @Column(name="isbn")
+    @Column(nullable = false)
     private long isbn;
 
     @Column(name="publisher")
     private String publisher;
 
-    @Column(name="year")
+    @Column(name="book_year")
     private short year;
 
+    @Enumerated(EnumType.STRING)
     @Column(name="language")
     private Language language;
 
-    @Transient
+    @ManyToMany(mappedBy = "books")
     private Set<Author> authors;
 
     public Long getId() {

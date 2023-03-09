@@ -1,7 +1,14 @@
 package fr.uga.l3miage.library.data.repo;
 
+import fr.uga.l3miage.library.data.domain.Author;
 import fr.uga.l3miage.library.data.domain.Book;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -11,10 +18,12 @@ import java.util.List;
 public class BookRepository implements CRUDRepository<Long, Book> {
 
     private final EntityManager entityManager;
+    private final CriteriaBuilder cb;
 
     @Autowired
     public BookRepository(EntityManager entityManager) {
         this.entityManager = entityManager;
+        this.cb = entityManager.getCriteriaBuilder(); //create a criteria builder
     }
 
     @Override
@@ -39,8 +48,14 @@ public class BookRepository implements CRUDRepository<Long, Book> {
      * @return une liste de livres
      */
     public List<Book> all() {
-        // TODO créer les named query
-        return entityManager.createNamedQuery("all-books", Book.class).getResultList();
+        CriteriaQuery<Book> query = this.cb.createQuery(Book.class); //create a query using the criteria builder
+        Root<Book> root = query.from(Book.class); //create a new root instance representing books
+
+        //predicate
+        query.orderBy(cb.asc(root.get("title"))); //sort the results by title
+
+        //return
+        return entityManager.createQuery(query).getResultList();
     }
 
     /**
@@ -49,10 +64,14 @@ public class BookRepository implements CRUDRepository<Long, Book> {
      * @return une liste de livres
      */
     public List<Book> findByContainingTitle(String titlePart) {
-        // TODO créer les named query
-        return entityManager.createNamedQuery("find-books-by-title", Book.class)
-                // TODO completer l'appel pour utiliser le paramètre de cette méthode
-                .getResultList();
+        CriteriaQuery<Book> query = this.cb.createQuery(Book.class);
+        Root<Book> root = query.from(Book.class);
+
+        //predicate
+        query.where(cb.like(cb.lower(root.get("title")), "%" + titlePart.toLowerCase() + "%")); //we use cb.lower() to make it case insensitive
+        
+        //return result
+        return entityManager.createQuery(query).getResultList();
     }
 
     /**
@@ -62,10 +81,21 @@ public class BookRepository implements CRUDRepository<Long, Book> {
      * @return une liste de livres
      */
     public List<Book> findByAuthorIdAndContainingTitle(Long authorId, String titlePart) {
-        // TODO créer les named query
-        return entityManager.createNamedQuery("find-books-by-author-and-title", Book.class)
-                // TODO completer l'appel pour utiliser les paramètres de cette méthode
-                .getResultList();
+        CriteriaQuery<Book> query = this.cb.createQuery(Book.class);
+        Root<Book> root = query.from(Book.class);
+
+        //Join the 2 tables needed
+        Join<Book, Author> authorJoin = root.join("authors");
+
+        //creating predicates
+        Predicate containsTitlePredicate = cb.like(cb.lower(root.get("title")), "%" + titlePart.toLowerCase() + "%");
+        Predicate authorIdPredicate = cb.equal(authorJoin.get("id"), authorId);
+
+        //combine the predicates
+        query.where(cb.and(authorIdPredicate, containsTitlePredicate));
+
+        //return result
+        return entityManager.createQuery(query).getResultList();
     }
 
     /**
@@ -74,10 +104,18 @@ public class BookRepository implements CRUDRepository<Long, Book> {
      * @return une liste de livres
      */
     public List<Book> findBooksByAuthorContainingName(String namePart) {
-        // TODO créer les named query
-        return entityManager.createNamedQuery("find-books-by-authors-name", Book.class)
-                // TODO completer l'appel pour utiliser le paramètre de cette méthode
-                .getResultList();
+        CriteriaQuery<Book> query = this.cb.createQuery(Book.class);
+        Root<Book> root = query.from(Book.class);
+
+        //join
+        Join<Book, Author> authorJoin = root.join("authors");
+
+        //predicate
+        query.where(cb.like(cb.lower(authorJoin.get("fullName")), "%" + namePart.toLowerCase() + "%"));
+        query.select(root);
+
+        //return
+        return entityManager.createQuery(query).getResultList();
     }
 
     /**
@@ -86,10 +124,16 @@ public class BookRepository implements CRUDRepository<Long, Book> {
      * @return une liste de livres
      */
     public List<Book> findBooksHavingAuthorCountGreaterThan(int count) {
-        // TODO créer les named query
-        return entityManager.createNamedQuery("find-books-by-several-authors", Book.class)
-                // TODO completer l'appel pour utiliser le paramètre de cette méthode
-                .getResultList();
+        CriteriaQuery<Book> query = this.cb.createQuery(Book.class);
+        Root<Book> root = query.from(Book.class);
+
+        //join
+        Join<Author, Book> authorJoin = root.join("authors");
+
+        //predicate
+        query.groupBy(root).having(cb.gt(cb.count(authorJoin), count));
+
+        return entityManager.createQuery(query).getResultList();
     }
 
 }
