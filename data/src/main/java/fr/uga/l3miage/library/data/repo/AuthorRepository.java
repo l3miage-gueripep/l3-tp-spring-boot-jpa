@@ -9,6 +9,8 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.metamodel.EntityType;
+import jakarta.persistence.metamodel.SingularAttribute;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -19,10 +21,12 @@ import java.util.List;
 public class AuthorRepository implements CRUDRepository<Long, Author> {
 
     private final EntityManager entityManager;
+    CriteriaBuilder cb;
 
     @Autowired
     public AuthorRepository(EntityManager entityManager) {
         this.entityManager = entityManager;
+        this.cb = this.entityManager.getCriteriaBuilder();
     }
 
     @Override
@@ -49,13 +53,14 @@ public class AuthorRepository implements CRUDRepository<Long, Author> {
      */
     @Override
     public List<Author> all() {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Author> query = cb.createQuery(Author.class);
+        CriteriaQuery<Author> query = this.cb.createQuery(Author.class);
         Root<Author> root = query.from(Author.class);
-        query.select(root);
+        
+        //predicate
         query.orderBy(cb.asc(root.get("fullName")));
-        TypedQuery<Author> typedQuery = entityManager.createQuery(query);
-        return typedQuery.getResultList();
+
+        //return
+        return entityManager.createQuery(query).getResultList();
     }
 
     /**
@@ -65,13 +70,18 @@ public class AuthorRepository implements CRUDRepository<Long, Author> {
      * @return une liste d'auteurs trié par nom
      */
     public List<Author> searchByName(String namePart) {
-        CriteriaBuilder cb = this.entityManager.getCriteriaBuilder();
-        CriteriaQuery<Author> cq = cb.createQuery(Author.class);
-        Root<Author> root = cq.from(Author.class);
+        CriteriaQuery<Author> query = this.cb.createQuery(Author.class);
+        Root<Author> root = query.from(Author.class);
+
+        //predicate
         Predicate predicate = cb.like(cb.lower(root.get("fullName")), "%" + namePart.toLowerCase() + "%");
-        cq.where(predicate).orderBy(cb.asc(root.get("fullName")));
-        TypedQuery<Author> query = this.entityManager.createQuery(cq);
-        return query.getResultList();
+        query.where(predicate);
+
+        //order
+        query.orderBy(cb.asc(root.get("fullName")));
+
+        //return
+        return this.entityManager.createQuery(query).getResultList();
     }
 
     /**
@@ -80,15 +90,43 @@ public class AuthorRepository implements CRUDRepository<Long, Author> {
      * @return true si l'auteur partage
      */
     public boolean checkAuthorByIdHavingCoAuthoredBooks(long authorId) {
-        CriteriaBuilder cb = this.entityManager.getCriteriaBuilder();
-        CriteriaQuery<Book> cq = cb.createQuery(Book.class);
-        Root<Book> root = cq.from(Book.class);
-        Join<Book, Author> join = root.join("authors");
-        Predicate predicate = cb.equal(join.get("id"), authorId);
-        cq.where(predicate).groupBy(root.get("id")).having(cb.gt(cb.count(join), 1));
-        TypedQuery<Book> query = this.entityManager.createQuery(cq);
-        List<Book> coAuthoredBooks = query.getResultList();
-        return !coAuthoredBooks.isEmpty();
+        CriteriaQuery<Book> query = cb.createQuery(Book.class);
+        Root<Book> root = query.from(Book.class);
+
+        //join
+        Join<Author, Book> authorJoin = root.join("authors");
+
+        //get author entity to easily select id having same name as book id
+        // EntityType<Author> author = entityManager.getMetamodel().entity(Author.class);
+        // EntityType<Book> book = entityManager.getMetamodel().entity(Book.class);
+
+        //predicate
+        // query.where(cb.equal(root.get("id"), authorId));
+        // query.groupBy(join.get(book.getSingularAttribute("id")));
+        // query.having(cb.gt(cb.count(join), 1));
+
+        //selectionne les livres où l'auteur a fait le livre
+        query.where(cb.equal(authorJoin.get("id"), authorId));
+        //groupe par livre
+        query.groupBy(root.get("id"));
+        
+        query.having(cb.gt(cb.count(authorJoin), 1));
+
+
+
+        //get result
+        List<Book> authorBooks =  this.entityManager.createQuery(query).getResultList();
+
+        // //debug
+        // System.out.println("Author " + authorId + ", " + authorBooks.size() + " livre(s) :");
+
+        // for(Book book : authorBooks){
+        //     System.out.println(book.getAuthors().size());
+        // }
+        
+        //return books
+        System.out.println("Taille : " + authorBooks.size());
+        return !authorBooks.isEmpty();
     }
 
 }

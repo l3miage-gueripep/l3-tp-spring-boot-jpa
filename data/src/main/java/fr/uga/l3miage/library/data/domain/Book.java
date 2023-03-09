@@ -22,7 +22,7 @@ import org.hibernate.annotations.ManyToAny;
 public class Book {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name="book_id")
+    @Column(name="id")
     private Long id;
 
     @Column(nullable = false)
