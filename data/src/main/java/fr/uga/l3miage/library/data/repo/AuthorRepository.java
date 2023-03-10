@@ -96,21 +96,13 @@ public class AuthorRepository implements CRUDRepository<Long, Author> {
         //join
         Join<Author, Book> authorJoin = root.join("authors");
 
-        //get author entity to easily select id having same name as book id
-        // EntityType<Author> author = entityManager.getMetamodel().entity(Author.class);
-        // EntityType<Book> book = entityManager.getMetamodel().entity(Book.class);
-
-        //predicate
-        // query.where(cb.equal(root.get("id"), authorId));
-        // query.groupBy(join.get(book.getSingularAttribute("id")));
-        // query.having(cb.gt(cb.count(join), 1));
-
         //selectionne les livres où l'auteur a fait le livre
         query.where(cb.equal(authorJoin.get("id"), authorId));
         //groupe par livre
-        query.groupBy(root.get("id"));
+        query.groupBy(root);
         
-        query.having(cb.gt(cb.count(authorJoin), 1));
+
+        
 
 
 
@@ -118,15 +110,19 @@ public class AuthorRepository implements CRUDRepository<Long, Author> {
         List<Book> authorBooks =  this.entityManager.createQuery(query).getResultList();
 
         // //debug
-        // System.out.println("Author " + authorId + ", " + authorBooks.size() + " livre(s) :");
-
-        // for(Book book : authorBooks){
-        //     System.out.println(book.getAuthors().size());
-        // }
+        System.out.println("Author " + authorId + ", " + authorBooks.size() + " livre(s) :");
+        Boolean haveCoauthoredBook = false;
+        int i = 0;
+        while(i < authorBooks.size() && !haveCoauthoredBook){
+            if(authorBooks.get(i).getAuthors().size() > 1){
+                haveCoauthoredBook = true;
+                
+            }
+            i++;
+        }
         
         //return books
-        System.out.println("Taille : " + authorBooks.size());
-        return !authorBooks.isEmpty();
+        return haveCoauthoredBook;
     }
 
 }
