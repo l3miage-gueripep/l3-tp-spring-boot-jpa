@@ -1,20 +1,26 @@
 package fr.uga.l3miage.library.data.repo;
 
 import fr.uga.l3miage.library.data.domain.Borrow;
-import jakarta.persistence.EntityManager;
+import jakarta.persistence.*;
+import jakarta.persistence.criteria.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
 public class BorrowRepository implements CRUDRepository<String, Borrow> {
 
     private final EntityManager entityManager;
+    private CriteriaBuilder cb;
 
     @Autowired
     public BorrowRepository(EntityManager entityManager) {
         this.entityManager = entityManager;
+        this.cb = this.entityManager.getCriteriaBuilder();
+
     }
 
     @Override
@@ -44,9 +50,15 @@ public class BorrowRepository implements CRUDRepository<String, Borrow> {
      * @param userId l'id de l'emprunteur
      * @return la liste des emprunts en cours
      */
-    public List<Borrow> findInProgressByUser(String userId) {
-        // TODO
-        return null;
+    public List<Borrow> findInProgressByUser(Long userId) {
+        CriteriaQuery<Borrow> query = this.cb.createQuery(Borrow.class);
+        Root<Borrow> root = query.from(Borrow.class);
+    
+        Predicate borrowerPredicate = this.cb.equal(root.get("borrower"), userId);
+        Predicate inProgressPredicate = this.cb.equal(root.get("finished"), false);
+    
+        query.where(this.cb.and(borrowerPredicate, inProgressPredicate));
+        return entityManager.createQuery(query).getResultList();
     }
 
     /**
@@ -88,8 +100,18 @@ public class BorrowRepository implements CRUDRepository<String, Borrow> {
      * @return les emprunt qui sont bientôt en retard
      */
     public List<Borrow> findAllBorrowThatWillLateWithin(int days) {
-        // TODO
-        return null;
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime dueDate = now.plusDays(days);
+    
+        CriteriaQuery<Borrow> query = this.cb.createQuery(Borrow.class);
+        Root<Borrow> root = query.from(Borrow.class);
+    
+        Predicate notReturnedPredicate = this.cb.equal(root.get("finished"), false);
+        Predicate dueDatePredicate = this.cb.between(root.get("requestedReturn"), now, dueDate);
+    
+        query.where(this.cb.and(notReturnedPredicate, dueDatePredicate));
+    
+        return this.entityManager.createQuery(query).getResultList();
     }
 
 }

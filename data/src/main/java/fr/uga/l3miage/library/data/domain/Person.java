@@ -2,20 +2,35 @@ package fr.uga.l3miage.library.data.domain;
 
 import java.util.Date;
 import java.util.Objects;
+import jakarta.persistence.*;
 
+@Entity
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class Person {
+    @Id
+    @GeneratedValue(strategy = GenerationType.TABLE)
+    @Column(name="id")
+    private Long id;
 
-    private String id;
+    @Enumerated(EnumType.STRING)
+    @Column(name="gender")
     private Gender gender;
+
+    @Column(name="firstName")
     private String firstName;
+
+    @Column(name="lastName")
     private String lastName;
+
+    @Temporal(TemporalType.DATE)
+    @Column(name="birth")
     private Date birth;
 
     public enum Gender {
         FEMALE, MALE, FLUID
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

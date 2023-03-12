@@ -1,7 +1,10 @@
 package fr.uga.l3miage.library.data.repo;
 
+import fr.uga.l3miage.library.data.domain.Borrow;
 import fr.uga.l3miage.library.data.domain.Librarian;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -11,10 +14,12 @@ import java.util.List;
 public class LibrarianRepository implements CRUDRepository<String, Librarian> {
 
     private final EntityManager entityManager;
+    private CriteriaBuilder cb;
 
     @Autowired
     public LibrarianRepository(EntityManager entityManager) {
         this.entityManager = entityManager;
+        this.cb = entityManager.getCriteriaBuilder();
     }
 
     @Override
@@ -43,8 +48,16 @@ public class LibrarianRepository implements CRUDRepository<String, Librarian> {
      * @return les bibliothéquaires les plus actif
      */
     public List<Librarian> top3WorkingLibrarians() {
-        // TODO
-        return null;
+        CriteriaQuery<Librarian> query = this.cb.createQuery(Librarian.class);
+    
+        Root<Borrow> borrowRoot = query.from(Borrow.class);
+        Join<Borrow, Librarian> librarianJoin = borrowRoot.join("librarian");
+    
+        query.multiselect(borrowRoot.get("librarian"), cb.count(borrowRoot))
+            .groupBy(borrowRoot.get("librarian"))
+            .orderBy(cb.desc(cb.count(borrowRoot)));
+        
+        return entityManager.createQuery(query).setMaxResults(3).getResultList();
     }
 
 }

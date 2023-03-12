@@ -2,19 +2,25 @@ package fr.uga.l3miage.library.data.repo;
 
 import fr.uga.l3miage.library.data.domain.User;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 @Repository
 public class UserRepository implements CRUDRepository<String, User> {
 
     private final EntityManager entityManager;
+    private CriteriaBuilder cb;
 
     @Autowired
     public UserRepository(EntityManager entityManager) {
         this.entityManager = entityManager;
+        this.cb = this.entityManager.getCriteriaBuilder();
     }
 
     @Override
@@ -44,8 +50,22 @@ public class UserRepository implements CRUDRepository<String, User> {
      * @return
      */
     public List<User> findAllOlderThan(int age) {
-        // TODO
-        return null;
+        //get current date
+        Date currentDate = new Date();
+        //get the max date to be born at to be older than age
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
+        calendar.add(Calendar.YEAR, -age);
+        //create a new corresponding date
+        Date maxDate = calendar.getTime();
+
+        //query
+        CriteriaQuery<User> query = this.cb.createQuery(User.class);
+        Root<User> root = query.from(User.class);
+        
+        query.where(cb.lessThan(root.get("birth"), maxDate));
+
+        return this.entityManager.createQuery(query).getResultList();
     }
 
 }

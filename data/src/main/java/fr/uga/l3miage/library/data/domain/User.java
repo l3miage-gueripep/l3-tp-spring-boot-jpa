@@ -3,9 +3,16 @@ package fr.uga.l3miage.library.data.domain;
 import java.util.Date;
 import java.util.Objects;
 
-// Attention le mot 'user' est reservé
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "users")
 public class User extends Person {
+    @Temporal(TemporalType.DATE)
+    @Column(name = "registered")
     private Date registered;
+    
+    @Column(name = "lateRatio")
     private float lateRatio;
 
     public Date getRegistered() {
